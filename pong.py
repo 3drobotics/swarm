@@ -1,4 +1,5 @@
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Joy
 import std_msgs
 import rosnode
 import roslib
@@ -13,6 +14,8 @@ import ast
 import os
 
 import velocity_goto
+
+SIMULATION = False
 
 class artoo:
     def __init__(self):
@@ -51,6 +54,34 @@ class artoo:
 
     def start_subbing(self):
         stick_sub = rospy.Subscriber("sticks", std_msgs.msg.String, self.handle_sticks)
+
+class joy:
+    def __init__(self):
+        self.stick_map = []
+
+        self.mod_scalar = 1.0
+
+        self.x_offset = 0.0
+        self.y_offset = 0.0
+        self.z_offset = 0.0
+
+        self.fin_x = 0.0
+        self.fin_y = 0.0
+        self.fin_z = 0.0
+
+        for i in range(8):
+            self.stick_map.append(0.0)
+
+    def handle_joystick(self, msg):
+        self.stick_map = msg.axes
+
+        self.x_offset = self.stick_map[1] * self.mod_scalar
+        self.y_offset = -self.stick_map[2] * self.mod_scalar
+        self.z_offset = self.stick_map[0]
+
+    def start_subbing(self):
+        stick_sub = rospy.Subscriber("joy", Joy, self.handle_joystick)
+
 
 class buttons:
     def __init__(self):
@@ -99,7 +130,10 @@ print "ready"
 b = buttons()
 b.start_subbing()
 
-a = artoo()
+if SIMULATION:
+    a = joy()
+else:
+    a = artoo()
 a.start_subbing()
 
 a.fin_x = cops[0].cur_pos_x
