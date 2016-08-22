@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Joy
 import std_msgs
