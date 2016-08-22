@@ -220,17 +220,18 @@ while True:
         ls = (cops[1].cur_pos_y + cops[2].cur_pos_y)/2.0
         rs = (cops[3].cur_pos_y + cops[4].cur_pos_y)/2.0
 
-        if cops[0].cur_pos_x - center_x > 5.0:
+        if cops[0].cur_pos_x - center_x > 5.0 and ball_dir > 0:
             if abs(cops[0].cur_pos_y - rs) < 2.5:
                 ball_dir = -1.0
                 print "SLAM!"
 
-        if cops[0].cur_pos_x - center_x < -5.0:            
+        if cops[0].cur_pos_x - center_x < -5.0 and ball_dir < 0:
             if abs(cops[0].cur_pos_y - ls) < 2.5:
                 ball_dir = 1.0
                 print "SLAM!"
 
-        if abs(cops[0].cur_pos_x - center_x) > 7.0:
+        if cops[0].cur_pos_x - center_x > 9.0 and ball_dir > 0 or \
+            cops[0].cur_pos_x - center_x < -9.0 and ball_dir < 0:
             print " "
             print " "
             print "DAAAAAMN YOU SUCK! TRY AGAIN!"
