@@ -20,7 +20,7 @@ import threading
 import thread
 from random import randint
 
-IS_APM = False
+IS_APM = True
 VELOCITY_CAP = 1.0
 
 NAMESPACE_PREFIX = '/iris_'
