@@ -361,8 +361,10 @@ class SafeTakeoff:
         last = 0
 
         for i in range(len(self.sorted_ids[::-1])):
-            # self.cops[i].setmode(custom_mode = "OFFBOARD")
-            self.cops[i].setmode(custom_mode = "AUTO.TAKEOFF")
+            if IS_APM:
+                self.cops[i].setmode(custom_mode = "AUTO.TAKEOFF")
+            else:
+                self.cops[i].setmode(custom_mode = "OFFBOARD")
 
             self.cops[i].arm()
             self.cops[i].takeoff_velocity(alt = alt + i*2.5)
