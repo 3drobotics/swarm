@@ -83,7 +83,7 @@ for cop in cops:
 
 i = 1
 
-if False: #trying safetakeoff for now
+if True: #trying safetakeoff for now
     for cop in cops:
         cop.setmode(custom_mode = "OFFBOARD")
         cop.arm()
@@ -91,7 +91,8 @@ if False: #trying safetakeoff for now
 
         cop.takeoff_velocity(alt = 1.0) # very short
 
-        i = i +1
+        i = i + 1
+        print("starting vehicle %s" % i)
 
 print "ready"
 
@@ -121,8 +122,8 @@ lstick = 0.0
 center_x = 0.0
 center_y = 0.0
 
-if True:
-    velocity_goto.SafeTakeoff(cops, offs_x, offs_y, alt = 10.0)
+if False:
+    velocity_goto.SafeTakeoff(cops, offs_x, offs_y, alt=10.0)
 
 while True:
     print " "
@@ -251,5 +252,3 @@ velocity_goto.SmartRTL(cops)
 print "so long!"
 
 time.sleep(1.0)
-
-
