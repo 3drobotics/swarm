@@ -7,6 +7,7 @@ from math import *
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import NavSatFix
 import geometry_msgs.msg
+from geometry_msgs.msg import TwistStamped
 import mavros
 import mavros_msgs.srv
 from mavros import setpoint as SP
@@ -22,10 +23,12 @@ from random import randint
 IS_APM = True
 VELOCITY_CAP = 1.0
 
+NAMESPACE_PREFIX = '/iris_'
+
 class posVel:
     def __init__(self, copter_id = "1"):
         self.copter_id = copter_id
-        mavros_string = "/copter"+copter_id+"/mavros"
+        mavros_string = NAMESPACE_PREFIX + copter_id + "/mavros"
         mavros.set_namespace(mavros_string)  # initialize mavros module with default namespace
 
         self.mavros_string = mavros_string
@@ -59,9 +62,9 @@ class posVel:
         self.button_sub = rospy.Subscriber("abpause_buttons", std_msgs.msg.String, self.handle_buttons)
 
         # publisher for mavros/copter*/setpoint_position/local
-        self.pub_vel = SP.get_pub_velocity_cmd_vel(queue_size=10)
+        self.pub_vel = rospy.Publisher(mavros_string + '/setpoint_velocity/cmd_vel', TwistStamped, queue_size=10)
         # subscriber for mavros/copter*/local_position/local
-        self.sub = rospy.Subscriber(mavros.get_topic('local_position', 'local'), SP.PoseStamped, self.temp)
+        self.sub = rospy.Subscriber(mavros_string + 'local_position/local', SP.PoseStamped, self.temp)
 
     def handle_buttons(self, msg):
         self.click = str(msg)[6:]
@@ -110,7 +113,7 @@ class posVel:
         arm = rospy.ServiceProxy(self.mavros_string+'/cmd/arming', mavros_msgs.srv.CommandBool)  
         print "Disarm: ", arm(False)
 
-    def setmode(self,base_mode=0,custom_mode="OFFBOARD",delay=0.1):
+    def setmode(self,base_mode=216,custom_mode="OFFBOARD",delay=0.1):
         set_mode = rospy.ServiceProxy(self.mavros_string+'/set_mode', mavros_msgs.srv.SetMode)  
         if IS_APM:
             if custom_mode == "OFFBOARD":
@@ -126,10 +129,10 @@ class posVel:
         time.sleep(delay)
 
     def takeoff_velocity(self, alt=7):
-        self.alt_control = False
-        if self.cur_alt < alt - 1:
-            print "CUR ALT: ", self.cur_alt, "GOAL: ", alt
-            #self.set_velocity(0, 0, 1.5)
+        self.alt_control = False ## TODO(tfoote) why? Update sets it to true
+        while self.cur_alt < alt - 1:
+            # print "CUR ALT: ", self.cur_alt, "GOAL: ", alt
+            self.set_velocity(0, 0, -5.5)
             self.update(self.cur_pos_x, self.cur_pos_y, alt)
  
         time.sleep(0.1)
@@ -252,10 +255,16 @@ class posVel:
             else:
                 msg.twist.linear = geometry_msgs.msg.Vector3(self.vx*magnitude, self.vy*magnitude, self.vz*magnitude)
 
-
-            self.pub_vel.publish(msg)
+            try:
+                self.pub_vel.publish(msg)
+            except rospy.exceptions.ROSException as ex:
+                print "exception!! %s" % ex
+                print self.pub_vel
             
-            rate.sleep()
+            try:
+                rate.sleep()
+            except rospy.exceptions.ROSException as ex:
+                print "exception in rate!! %s" % ex
             i += 1
 
     def land_velocity(self):
@@ -352,12 +361,13 @@ class SafeTakeoff:
         last = 0
 
         for i in range(len(self.sorted_ids[::-1])):
-            self.cops[i].setmode(custom_mode = "OFFBOARD")
+            if IS_APM:
+                self.cops[i].setmode(custom_mode = "AUTO.TAKEOFF")
+            else:
+                self.cops[i].setmode(custom_mode = "OFFBOARD")
 
             self.cops[i].arm()
-
             self.cops[i].takeoff_velocity(alt = alt + i*2.5)
-
             if sequential:
                 while self.cops[i].cur_alt < alt + i*2.5 - 1.0:
                     self.cops[i].update(self.cops[i].cur_pos_x, self.cops[i].cur_pos_y, alt + i*2.5)
@@ -398,17 +408,16 @@ if __name__ == '__main__':
     print "set mode"
     pv.setmode(custom_mode="OFFBOARD")
     pv.arm()
+    pv.setmode(custom_mode="OFFBOARD") # Needed after for px4
     time.sleep(0.1)
     pv.takeoff_velocity()
     time.sleep(0.1)
     print "out of takeoff"
 
     # Send copter to current coordinate at 40m
-    pv.update(pv.get_lat_lon_alt()[0], pv.get_lat_lon_alt()[1], 40.0)
-    
-    while not pv.reached:
+    pv.update(pv.get_lat_lon_alt()[0]+10, pv.get_lat_lon_alt()[1], 15.0)
+    while not pv.reached and not rospy.is_shutdown():
         time.sleep(0.025)
-
     print "at gps, waiting"
     time.sleep(2.0)
 
@@ -418,4 +427,3 @@ if __name__ == '__main__':
     SmartRTL(copters)
 
     print "Landed!"
-
